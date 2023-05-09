@@ -1,0 +1,9 @@
+{
+    "app": "python3 app.py",
+    "context": {
+        "environment": {
+            "AWS_REGION": "us-east-1",
+            "S3_BUCKET_NAME": "practice-bucket-for-sftp"
+        }
+    }
+}
