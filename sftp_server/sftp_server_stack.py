@@ -19,6 +19,7 @@ class SftpServerStack(Stack):
         self.sftp_role = iam.Role(
             self,
             "SftpRole",
+            role_name=environment["IAM_ROLE_NAME"],
             assumed_by=iam.CompositePrincipal(
                 iam.ServicePrincipal("transfer.amazonaws.com"),
                 iam.ServicePrincipal("lambda.amazonaws.com"),
@@ -70,15 +71,18 @@ class SftpServerStack(Stack):
         self.authentication_lambda = _lambda.Function(
             self,
             "AuthenticationLambda",
-            runtime=_lambda.Runtime.PYTHON_3_9,
+            function_name=environment["LAMBDA_NAME"],
+            handler="handler.lambda_handler",
+            memory_size=128,
+            timeout=Duration.seconds(3),  # should be instantaneous
+            runtime=_lambda.Runtime.PYTHON_3_10,
+            environment={
+                "S3_BUCKET_NAME": environment["S3_BUCKET_NAME"],
+            },
             code=_lambda.Code.from_asset(
                 "lambda_code/authentication_lambda",
                 exclude=[".venv/*"],
             ),
-            handler="handler.lambda_handler",
-            timeout=Duration.seconds(3),  # should be instantaneous
-            memory_size=128,
-            environment={"S3_BUCKET_NAME": environment["S3_BUCKET_NAME"]},
             role=self.sftp_role,
         )
 
@@ -86,14 +90,19 @@ class SftpServerStack(Stack):
         self.authentication_lambda.add_environment(
             key="IAM_ROLE_ARN", value=self.sftp_role.role_arn
         )
+        self.authentication_lambda.add_permission(
+            "SftpInvokesAuthenticationLambda",
+            principal=iam.ServicePrincipal("transfer.amazonaws.com"),
+            action="lambda:InvokeFunction",
+        )
         transfer.CfnServer(
             self,
             "SftpServer",
-            logging_role=self.sftp_role.role_arn,
-            domain="S3",
             endpoint_type="PUBLIC",
             identity_provider_type="AWS_LAMBDA",
             identity_provider_details={
                 "function": self.authentication_lambda.function_arn
             },
+            domain="S3",
+            logging_role=self.sftp_role.role_arn,
         )

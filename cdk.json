@@ -3,7 +3,9 @@
     "context": {
         "environment": {
             "AWS_REGION": "us-east-1",
-            "S3_BUCKET_NAME": "practice-bucket-for-sftp"
+            "IAM_ROLE_NAME": "sftp-role",
+            "S3_BUCKET_NAME": "practice-bucket-for-sftp-server",
+            "LAMBDA_NAME": "authentication-for-sftp-server"
         }
     }
 }
