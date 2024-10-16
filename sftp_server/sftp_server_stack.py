@@ -5,6 +5,7 @@ from aws_cdk import (
     aws_iam as iam,
     aws_lambda as _lambda,
     aws_s3 as s3,
+    aws_s3_deployment as s3_deploy,
     aws_transfer as transfer,
 )
 from constructs import Construct
@@ -50,7 +51,10 @@ class SftpServerStack(Stack):
                     "s3:GetObjectACL",
                     "s3:PutObjectACL",
                 ],
-                resources=["*"],
+                resources=[
+                    f"arn:aws:s3:::{environment['S3_BUCKET_NAME']}",
+                    f"arn:aws:s3:::{environment['S3_BUCKET_NAME']}/*",
+                ],
             ),
         )
         self.sftp_role.add_to_policy(
@@ -95,7 +99,7 @@ class SftpServerStack(Stack):
             principal=iam.ServicePrincipal("transfer.amazonaws.com"),
             action="lambda:InvokeFunction",
         )
-        transfer.CfnServer(
+        self.sftp_server = transfer.CfnServer(
             self,
             "SftpServer",
             endpoint_type="PUBLIC",
@@ -105,4 +109,12 @@ class SftpServerStack(Stack):
             },
             domain="S3",
             logging_role=self.sftp_role.role_arn,
+        )
+        self.s3_file = s3_deploy.BucketDeployment(
+            self,
+            "UploadS3File",
+            destination_bucket=self.s3_bucket_for_sftp,
+            destination_key_prefix="home/stori/mdc_landing",  # hard coded
+            sources=[s3_deploy.Source.asset("./data")],  # hard coded
+            retain_on_delete=False,
         )
