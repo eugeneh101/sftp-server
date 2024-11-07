@@ -1,4 +1,5 @@
 from aws_cdk import (
+    CfnOutput,
     Duration,
     RemovalPolicy,
     Stack,
@@ -117,4 +118,21 @@ class SftpServerStack(Stack):
             destination_key_prefix="home/stori/mdc_landing",  # hard coded
             sources=[s3_deploy.Source.asset("./data")],  # hard coded
             retain_on_delete=False,
+        )
+
+        # Export and Output
+        self.export_value(
+            name="SFTP-IP-address",  # allows colon and hyphen
+            exported_value=(
+                f"{self.sftp_server.attr_server_id}.server.transfer."
+                f"{self.region}.amazonaws.com"
+            ),
+        )
+        CfnOutput(
+            self,
+            "SftpIpAddress",  # Output omits underscores and hyphens
+            value=(
+                f"{self.sftp_server.attr_server_id}.server.transfer."
+                f"{self.region}.amazonaws.com"
+            ),
         )
